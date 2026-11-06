@@ -9,6 +9,7 @@ http.createServer(async (req, res) => {
     res.json = (j) => { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(j)); };
     return h({ method: req.method, body, query: Object.fromEntries(u.searchParams) }, res);
   }
+  if (u.pathname === '/anime.min.js') { res.setHeader('Content-Type', 'text/javascript'); return res.end(fs.readFileSync(new URL('./anime.min.js', import.meta.url))); }
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.end(fs.readFileSync(new URL('./index.html', import.meta.url)));
 }).listen(3000, '0.0.0.0', () => console.log('http://localhost:3000'));

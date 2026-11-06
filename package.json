@@ -1,1 +1,1 @@
-{"type":"module","private":true,"scripts":{"dev":"node dev.mjs","test":"node test.mjs"}}
+{"type":"module","private":true,"scripts":{"dev":"node dev.mjs","test":"node test.mjs"},"dependencies":{"@neon/config":"^1.12.1","@neon/env":"^2.0.1"}}
