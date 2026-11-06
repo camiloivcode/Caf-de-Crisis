@@ -190,7 +190,7 @@ function team() {
       <div class="blks">${c.options.map((o) => `<button class="blk ${o.letter} ${me.pick && me.pick !== o.letter ? 'dim' : ''} ${me.pick === o.letter ? 'sel' : ''}" data-l="${o.letter}"><span class="sh">${SH[o.letter]}</span><span>${esc(o.text)}</span></button>`).join('')}</div>
       <p class="hint">${me.pick ? 'Puedes cambiarla hasta que se acabe el tiempo' : 'Lee el caso y elige una opción'}</p>`;
   }
-  if (st.phase === 'final') return `<div class="res ${pos === 0 && me.cap > 0 ? 'big' : 'none'}" ${pos === 0 ? 'data-burst' : ''}><div class="emoji">${pos === 0 ? '🏆' : pos === 1 ? '🥈' : '🥉'}</div><h2>${ORD[pos]} lugar</h2><div class="amt">${cnt('cap-' + ses.team, me.cap)}</div><p>${esc(me.name)}</p>${exitBtn()}</div>`;
+  if (st.phase === 'final') return `<div class="res ${pos === 0 && me.cap > 0 ? 'big' : 'none'}" ${pos === 0 ? 'data-burst' : ''}><div class="emoji">${pos === 0 ? '🏆' : pos === 1 ? '🥈' : '🥉'}</div><h2>${ORD[pos]} lugar</h2><div class="amt">${cnt('cap-' + ses.team, me.cap)}</div><p>${esc(me.name)}</p>${c ? `<p>Última ronda: ${mine ? '<b>' + SG(mine.amount) + '</b>' : 'sin decisión'}</p><div class="blks" style="width:min(900px,100%);flex:none">${blocks(c.options)}</div>` : ''}${exitBtn()}</div>`;
   const k = mine?.kind || 'none';
   return `<div class="res ${k}"><div class="emoji">${KIND[k][1]}</div><h2>${KIND[k][0]}</h2>${mine ? `<div class="amt">${cnt('amt-' + st.round, mine.amount, 'sg', 0)}</div>` : ''}
     <p>Capital: <b>${cnt('cap-' + ses.team, me.cap)}</b> · Van <b>${ORD[pos]}</b></p>${c ? `<p>${mine?.letter ? 'Elegiste la opción ' + mine.letter : 'No elegiste ninguna opción'}</p><div class="blks" style="width:min(900px,100%);flex:none">${blocks(c.options)}</div>` : ''}
@@ -259,7 +259,7 @@ function animateValues() {
 
 const rise = (sel, base = 0, extra = {}) => {
   const n = document.querySelectorAll(sel);
-  if (n.length) anime({ targets: n, opacity: [0, 1], translateY: [26, 0], scale: [.94, 1], delay: anime.stagger(90, { start: base }), duration: 800, easing: 'easeOutElastic(1,.8)', ...extra });
+  if (n.length) anime({ targets: n, translateY: [26, 0], scale: [.94, 1], delay: anime.stagger(60, { start: base }), duration: 700, easing: 'easeOutElastic(1,.8)', ...extra });
 };
 
 function enter() {
@@ -270,7 +270,7 @@ function enter() {
   rise('.center>.card,.teams .tbtn', 200);
   rise('.q', 0, { translateY: [-24, 0] });
   rise('.chip', 150);
-  rise('.blk', 250);
+  rise('.blk', 0);
   rise('.rk', 150, { translateY: [0, 0], translateX: [-40, 0], scale: [1, 1] });
   rise('.act .btn,.center>.btn', 500);
   if ($('.res')) {
@@ -332,7 +332,8 @@ function loops() {
 
 // interacción: hover / presionar en botones y bloques
 const BTN = 'button.blk,button.tbtn,.btn';
-const to = (b, s, y = 0, d = 220) => { anime.remove(b); anime({ targets: b, scale: s, translateY: y, duration: d, easing: s === 1 ? 'easeOutElastic(1,.6)' : 'easeOutQuad' }); };
+const hov = new WeakMap();
+const to = (b, s, y = 0, d = 220) => { hov.get(b)?.pause(); hov.set(b, anime({ targets: b, scale: s, translateY: y, duration: d, easing: s === 1 ? 'easeOutElastic(1,.6)' : 'easeOutQuad' })); };
 addEventListener('pointerover', (e) => { const b = can() && e.target.closest?.(BTN); if (b && !b.disabled && e.pointerType === 'mouse' && !b.contains(e.relatedTarget)) to(b, 1.03, -3); });
 addEventListener('pointerout', (e) => { const b = can() && e.target.closest?.(BTN); if (b && !b.disabled && !b.contains(e.relatedTarget)) to(b, 1); });
 addEventListener('pointerdown', (e) => { const b = can() && e.target.closest?.(BTN); if (b && !b.disabled) to(b, .95, 2, 90); });
@@ -353,7 +354,7 @@ function render() {
   animateValues();
   loops();
   if (entering) enter();
-  setTimeout(() => app.querySelectorAll('[style*="opacity"]').forEach((e) => { e.style.opacity = ''; }), 2200);
+  setTimeout(() => app.querySelectorAll('[style*="opacity"],[style*="clip-path"]').forEach((e) => { e.style.opacity = ''; e.style.clipPath = ''; }), 2200);
   const sel = $('.blk.sel');
   const pick = sel ? sel.dataset.l : null;
   if (pick && pick !== lastPick && can() && !entering) anime({ targets: sel, scale: [1, 1.06, 1], duration: 450, easing: 'easeOutQuad' });
