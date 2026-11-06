@@ -35,4 +35,15 @@ await Promise.all(Array.from({ length: 5 }, () => call('GET', null, { room })));
 g = (await call('GET', null, { room })).j;
 assert.equal(capSum(), before);                        // candado: no se aplica dos veces
 assert.equal(g.history.length, 1);
+// liberar equipo: otro dispositivo puede tomarlo y conserva capital
+assert.equal((await call('POST', { action: 'release', room, team: 'andino', hostToken: 'mal' })).c, 403);
+const capBefore = g.teams.andino.cap;
+await call('POST', { action: 'release', room, team: 'andino', hostToken });
+const oldTok = tk.andino;
+assert.equal((await call('POST', { action: 'choose', room, team: 'andino', token: oldTok, letter: 'A' })).c, 403); // token viejo ya no sirve
+const nuevo = (await call('POST', { action: 'join', room, team: 'andino' })).j.token;
+assert.notEqual(nuevo, oldTok);
+g = (await call('GET', null, { room, team: 'andino', token: nuevo })).j;
+assert.equal(g.me, 'andino'); assert.equal(g.teams.andino.cap, capBefore);
+assert.notEqual((await call('GET', null, { room, team: 'andino', token: oldTok })).j.me, 'andino');
 console.log('api ok');

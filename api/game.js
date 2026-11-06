@@ -35,6 +35,11 @@ export const db = {
     await init();
     await sql('insert into kv (k, f, v) values ($1, $2, $3) on conflict (k, f) do update set v = excluded.v', [k, f, String(v)]);
   },
+  async hdel(k, f) {
+    if (!DB_URL) { const o = mem.get(k); if (o) delete o[f]; return; }
+    await init();
+    await sql('delete from kv where k = $1 and f = $2', [k, f]);
+  },
   async hsetnx(k, f, v) { // true si lo escribió
     if (!DB_URL) { const o = mem.get(k) || {}; if (f in o) return false; o[f] = String(v); mem.set(k, o); return true; }
     await init();
@@ -76,7 +81,7 @@ async function load(room) {
 function view({ meta, teams }, who) {
   const r = meta.round, revealed = meta.phase === 'reveal' || meta.phase === 'final';
   const v = {
-    phase: meta.phase, round: r, total: ROUNDS.length,
+    phase: meta.phase, round: r, total: ROUNDS.length, me: who,
     endsIn: meta.phase === 'decide' ? Math.max(0, meta.deadline - Date.now()) : 0,
     teams: Object.fromEntries(Object.entries(teams).map(([t, x]) => [t, {
       name: x.name, cap: x.cap, claimed: x.claimed, bankrupt: x.cap <= 0,
@@ -171,6 +176,11 @@ export default async function handler(req, res) {
 
     // acciones del docente
     if (b.hostToken !== meta.hostToken) return bad(res, 403, 'Solo el docente');
+    if (b.action === 'release') { // libera un equipo para que otro dispositivo lo tome
+      if (!teams[b.team]) return bad(res, 400, 'Equipo inválido');
+      await db.hdel(key, 'tok:' + b.team);
+      return res.json({ ok: true });
+    }
     if (b.action === 'start' || b.action === 'next') {
       if (b.action === 'start' ? meta.phase !== 'lobby' : meta.phase !== 'reveal') return bad(res, 400, 'Acción no válida ahora');
       if (b.action === 'next') meta.round++;
