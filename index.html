@@ -52,7 +52,7 @@ input:focus{outline:3px solid var(--caramel);border-color:var(--caramel)}
 .blk .sh{font-size:2.2rem;line-height:1;flex:none;width:2.4rem;text-align:center}
 .blk.A{background:var(--cherry)}.blk.B{background:var(--leaf)}.blk.C{background:var(--caramel);color:var(--ink)}
 div.blk{cursor:default}
-.blk.dim{opacity:.3}
+.blk.dim{opacity:.6}
 .blk.sel{outline:5px solid var(--surface);outline-offset:2px}
 .blk .out{display:block;margin-top:8px;font-weight:600;font-size:.9em;background:rgba(0,0,0,.3);border-radius:8px;padding:8px;color:#fff}
 .blk .out b{font-weight:900}
@@ -185,15 +185,15 @@ function team() {
   if (me.bankrupt && st.phase !== 'decide') return `<div class="res dead">${exitBtn()}<div class="emoji">💀</div><h2>Tu empresa quebró</h2><p>Sigue la partida en el proyector.</p></div>`;
   if (st.phase === 'decide') {
     if (me.bankrupt) return `<div class="res dead"><div class="emoji">💀</div><h2>Tu empresa quebró</h2>${exitBtn()}</div>`;
-    return `${top}<div class="q" style="margin:12px 12px 0"><h2 style="font-size:1.1rem;margin:0">${esc(c.title)}</h2></div>
+    return `${top}<div class="q" style="margin:12px 12px 0"><h2 style="font-size:1.15rem;margin:0 0 6px">${esc(c.title)}</h2><p style="font-size:.95rem">${esc(c.story)}</p></div>
       <div class="qrow" style="padding:10px 16px"><span class="pill tm"></span><span>${me.pick ? '✔ Decisión enviada' : 'Elige una opción'}</span></div>
       <div class="blks">${c.options.map((o) => `<button class="blk ${o.letter} ${me.pick && me.pick !== o.letter ? 'dim' : ''} ${me.pick === o.letter ? 'sel' : ''}" data-l="${o.letter}"><span class="sh">${SH[o.letter]}</span><span>${esc(o.text)}</span></button>`).join('')}</div>
-      <p class="hint">${me.pick ? 'Puedes cambiarla hasta que se acabe el tiempo' : 'Lee la historia en la pantalla principal'}</p>`;
+      <p class="hint">${me.pick ? 'Puedes cambiarla hasta que se acabe el tiempo' : 'Lee el caso y elige una opción'}</p>`;
   }
   if (st.phase === 'final') return `<div class="res ${pos === 0 && me.cap > 0 ? 'big' : 'none'}" ${pos === 0 ? 'data-burst' : ''}><div class="emoji">${pos === 0 ? '🏆' : pos === 1 ? '🥈' : '🥉'}</div><h2>${ORD[pos]} lugar</h2><div class="amt">${cnt('cap-' + ses.team, me.cap)}</div><p>${esc(me.name)}</p>${exitBtn()}</div>`;
   const k = mine?.kind || 'none';
   return `<div class="res ${k}"><div class="emoji">${KIND[k][1]}</div><h2>${KIND[k][0]}</h2>${mine ? `<div class="amt">${cnt('amt-' + st.round, mine.amount, 'sg', 0)}</div>` : ''}
-    <p>Capital: <b>${cnt('cap-' + ses.team, me.cap)}</b> · Van <b>${ORD[pos]}</b></p>${c ? `<div class="why">${esc(c.options.find((o) => o.letter === mine?.letter)?.why || c.options.find((o) => o.kind === 'lose').why)}</div>` : ''}
+    <p>Capital: <b>${cnt('cap-' + ses.team, me.cap)}</b> · Van <b>${ORD[pos]}</b></p>${c ? `<p>${mine?.letter ? 'Elegiste la opción ' + mine.letter : 'No elegiste ninguna opción'}</p><div class="blks" style="width:min(900px,100%);flex:none">${blocks(c.options)}</div>` : ''}
     <p class="hint">Esperando la siguiente ronda…</p>${exitBtn()}</div>`;
 }
 
@@ -353,6 +353,7 @@ function render() {
   animateValues();
   loops();
   if (entering) enter();
+  setTimeout(() => app.querySelectorAll('[style*="opacity"]').forEach((e) => { e.style.opacity = ''; }), 2200);
   const sel = $('.blk.sel');
   const pick = sel ? sel.dataset.l : null;
   if (pick && pick !== lastPick && can() && !entering) anime({ targets: sel, scale: [1, 1.06, 1], duration: 450, easing: 'easeOutQuad' });
