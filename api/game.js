@@ -6,33 +6,39 @@ const HOST_PIN = '2026'; // PIN del docente para crear partidas
 const ROUND_MS = Number(process.env.ROUND_MS) || 90_000; // cuenta regresiva por ronda
 const L = ['A', 'B', 'C'];
 
-// ---------- almacenamiento: Upstash Redis (REST) o memoria local ----------
-const URL_ = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-const TOK = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
-const mem = globalThis.__mem ||= new Map(); // ponytail: solo dev local, en Vercel se usa Redis
+// ---------- almacenamiento: Neon Postgres (HTTP, sin dependencias) o memoria local ----------
+const DB_URL = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+const mem = globalThis.__mem ||= new Map(); // ponytail: solo dev local, en Vercel se usa Neon
 
-async function cmd(...c) {
-  const r = await fetch(URL_, { method: 'POST', headers: { Authorization: `Bearer ${TOK}` }, body: JSON.stringify(c) });
+async function sql(query, params = []) {
+  const host = new URL(DB_URL).host.replace('-pooler', '');
+  const r = await fetch(`https://${host}/sql`, {
+    method: 'POST',
+    headers: { 'Neon-Connection-String': DB_URL, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query, params }),
+  });
   const j = await r.json();
-  if (j.error) throw new Error(j.error);
-  return j.result;
+  if (!r.ok) throw new Error(j.message || 'Error de base de datos');
+  return j.rows;
 }
+let ready;
+const init = () => (ready ||= sql('create table if not exists kv (k text, f text, v text, primary key (k, f))'));
+
 export const db = {
   async hgetall(k) {
-    if (!URL_) return { ...(mem.get(k) || {}) };
-    const a = (await cmd('HGETALL', k)) || [];
-    const o = {};
-    for (let i = 0; i < a.length; i += 2) o[a[i]] = a[i + 1];
-    return o;
+    if (!DB_URL) return { ...(mem.get(k) || {}) };
+    await init();
+    return Object.fromEntries((await sql('select f, v from kv where k = $1', [k])).map((x) => [x.f, x.v]));
   },
   async hset(k, f, v) {
-    if (!URL_) { mem.set(k, { ...(mem.get(k) || {}), [f]: String(v) }); return; }
-    await cmd('HSET', k, f, String(v));
-    await cmd('EXPIRE', k, 86400);
+    if (!DB_URL) { mem.set(k, { ...(mem.get(k) || {}), [f]: String(v) }); return; }
+    await init();
+    await sql('insert into kv (k, f, v) values ($1, $2, $3) on conflict (k, f) do update set v = excluded.v', [k, f, String(v)]);
   },
   async hsetnx(k, f, v) { // true si lo escribió
-    if (!URL_) { const o = mem.get(k) || {}; if (f in o) return false; o[f] = String(v); mem.set(k, o); return true; }
-    return (await cmd('HSETNX', k, f, String(v))) === 1;
+    if (!DB_URL) { const o = mem.get(k) || {}; if (f in o) return false; o[f] = String(v); mem.set(k, o); return true; }
+    await init();
+    return (await sql('insert into kv (k, f, v) values ($1, $2, $3) on conflict do nothing returning f', [k, f, String(v)])).length === 1;
   },
 };
 
